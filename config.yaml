@@ -1,0 +1,43 @@
+server:
+  name: "enhanced_riskctrl"
+  address:     ":8001"
+  workId: 1
+  cpuCore: 2
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+jaeger:
+  enable: true
+  url: "127.0.0.1:6831"
+
+logger:
+  level : "all"
+  stdout: true 
+  rotateExpire: "1d"
+  path: "./"
+
+nrpc:
+  natsUrl: "127.0.0.1:4222"
+
+database:
+  enhanced_riskctrl:
+  - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/enhanced_riskctrl"
+    role: "master"
+  - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/enhanced_riskctrl"
+    role: "slave"
+  mpc:
+  - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/mpc"
+
+cache:
+  duration: 10000
+  retentionDataTime: "-72h"
+# redis 
+redis:
+  aggRiskCtrl:
+    address: 127.0.0.1:6379
+    db:      11
+  cache:
+    address: 127.0.0.1:6379
+    db:          2
+
+userToken: "https://auth-dev.mixmarvel-sdk.com/info"
