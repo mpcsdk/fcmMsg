@@ -4,21 +4,21 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-type PushMsgReq struct {
-	g.Meta   `path:"/pushMsg" tags:"pushMsg" method:"post" summary:"You first hello api"`
+type SendMsgReq struct {
+	g.Meta   `path:"/sendMsg" tags:"sendMsg" method:"post" summary:"You first hello api"`
 	Token    string `json:"token"`
 	FcmToken string `json:"fcmToken"`
 	Title    string `json:"title"`
 	Body     string `json:"body"`
 	Data     string `json:"data"`
 }
-type PushMsgRes struct {
+type SendMsgRes struct {
 	g.Meta   `mime:"text/html" example:"string"`
 	Response string `json:"response"`
 }
 
 type SubMsgReq struct {
-	g.Meta   `path:"/pushMsg" tags:"pushMsg" method:"post" summary:"You first hello api"`
+	g.Meta   `path:"/subMsg" tags:"subMsg" method:"post" summary:"You first hello api"`
 	Token    string `json:"token"`
 	FcmToken string `json:"fcmToken"`
 	Address  string `json:"address"`

@@ -1,6 +1,10 @@
 package db
 
-import "github.com/mpcsdk/mpcCommon/mpcdao"
+import (
+	"fcmMsg/internal/service"
+
+	"github.com/mpcsdk/mpcCommon/mpcdao"
+)
 
 type sDB struct {
 	fmc *mpcdao.Fcm
@@ -16,5 +20,5 @@ func NewDB() *sDB {
 }
 
 func init() {
-
+	service.RegisterDB(NewDB())
 }

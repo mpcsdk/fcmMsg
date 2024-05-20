@@ -14,7 +14,7 @@ type (
 		FcmToken(address string) string
 		SubFcmToken(address string, token string)
 		PushByAddr(ctx context.Context, addr string, title string, body string, data string) (string, error)
-		Send(ctx context.Context, token string, title string, body string, data string) (string, error)
+		Send(ctx context.Context, fcmToken string, title string, body string, data string) (string, error)
 	}
 )
 

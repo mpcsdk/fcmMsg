@@ -11,7 +11,7 @@ import (
 )
 
 type IPushMsgV1 interface {
-	PushMsg(ctx context.Context, req *v1.PushMsgReq) (res *v1.PushMsgRes, err error)
+	SendMsg(ctx context.Context, req *v1.SendMsgReq) (res *v1.SendMsgRes, err error)
 	SubMsg(ctx context.Context, req *v1.SubMsgReq) (res *v1.SubMsgRes, err error)
 }
 

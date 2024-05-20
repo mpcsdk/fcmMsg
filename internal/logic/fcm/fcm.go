@@ -3,7 +3,6 @@ package logic
 import (
 	"context"
 	"fcmMsg/internal/service"
-	"log"
 	"sync"
 
 	firebase "firebase.google.com/go/v4"
@@ -12,14 +11,20 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/mpcsdk/mpcCommon/mpcdao"
 	"github.com/mpcsdk/mpcCommon/mpcdao/model/entity"
+	"github.com/mpcsdk/mpcCommon/rand"
 	"google.golang.org/api/option"
 )
 
+type scanData struct {
+	fcmToken string
+	addr     string
+}
 type sFcm struct {
 	ctx           context.Context
 	client        *messaging.Client
 	addrLock      sync.RWMutex
 	addrFcmTokens map[string]string
+	scanChan      chan scanData
 }
 
 func (s *sFcm) FcmToken(address string) string {
@@ -28,11 +33,52 @@ func (s *sFcm) FcmToken(address string) string {
 	return s.addrFcmTokens[address]
 }
 func (s *sFcm) SubFcmToken(address string, token string) {
-	s.addrLock.Lock()
-	defer s.addrLock.Unlock()
-	s.addrFcmTokens[address] = token
+	{
+		s.addrLock.Lock()
+		defer s.addrLock.Unlock()
+		s.addrFcmTokens[address] = token
+	}
+	///scanOffline msg
+	s.scanChan <- scanData{
+		fcmToken: token,
+		addr:     address,
+	}
 }
 
+func (s *sFcm) scanOfflineMsg() {
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case scanData := <-s.scanChan:
+			s.scanOffline(s.ctx, scanData.addr, scanData.fcmToken)
+		default:
+		}
+	}
+}
+func (s *sFcm) scanOffline(ctx context.Context, address string, token string) {
+	var lastPos mpcdao.PosFcmOffline = nil
+	for {
+		datas, pos, err := service.DB().Fcm().QueryFcmOfflineMsg(s.ctx, lastPos, 10)
+		if err != nil {
+			g.Log().Warning(ctx, "scanOffline err:", err)
+			return
+		}
+		////
+		ids := []string{}
+		for _, data := range datas {
+			_, err := s.PushByAddr(ctx, data.Address, data.Title, data.Body, data.Data)
+			if err == nil {
+				ids = append(ids, data.Id)
+			}
+		}
+		service.DB().Fcm().DeleteOfflineMsgs(ctx, ids)
+		if len(datas) < 10 {
+			break
+		}
+		lastPos = pos
+	}
+}
 func (s *sFcm) PushByAddr(ctx context.Context, addr string, title string, body string, data string) (string, error) {
 	fcmToken := s.FcmToken(addr)
 	if fcmToken == "" {
@@ -41,32 +87,61 @@ func (s *sFcm) PushByAddr(ctx context.Context, addr string, title string, body s
 	////
 	response, err := s.Send(ctx, fcmToken, title, body, data)
 	if err != nil {
-		service.DB().Fcm().InsertPushErr(ctx, &entity.PushErr{
-			FmcToken: fcmToken,
-			Err:      err.Error(),
-			Title:    title,
-			Body:     body,
-			Data:     data,
-		})
-		g.Log().Warning(ctx, "FCM push ", "addr:", addr, "token:", fcmToken, "err:", err)
-		return "", err
+		if messaging.IsUnregistered(err) {
+			id := rand.GenNewSid()
+			err := service.DB().Fcm().InsertFcmOfflineMsg(ctx, &entity.FcmOfflineMsg{
+				Id:       id,
+				FmcToken: fcmToken,
+				Title:    title,
+				Body:     body,
+				Data:     data,
+				UserId:   "",
+				Address:  addr,
+			})
+			if err != nil {
+				g.Log().Warning(ctx, "FCM InsertFcmOfflineMsg ", "addr:", addr, "token:", fcmToken, "err:", err)
+			}
+		} else {
+			service.DB().Fcm().InsertPushErr(ctx, &entity.PushErr{
+				FmcToken: fcmToken,
+				Err:      err.Error(),
+				Title:    title,
+				Body:     body,
+				Data:     data,
+			})
+			g.Log().Warning(ctx, "FCM push ", "addr:", addr, "token:", fcmToken, "err:", err)
+		}
 	}
 	g.Log().Info(ctx, "FCM push ", "addr:", addr, "token:", fcmToken, "response:", response)
 	return response, nil
 }
-func (s *sFcm) Send(ctx context.Context, token string, title string, body string, data string) (string, error) {
+func (s *sFcm) Send(ctx context.Context, fcmToken string, title string, body string, data string) (string, error) {
 	response, err := s.client.Send(context.Background(), &messaging.Message{
 		Notification: &messaging.Notification{
 			Title: title,
 			Body:  body,
 		},
-		Data: map[string]string{
-			"data": data,
+		Android: &messaging.AndroidConfig{
+			Notification: &messaging.AndroidNotification{
+				ClickAction: data,
+			},
 		},
-		Token: token,
+		Token: fcmToken,
 	})
-	if messaging.IsRegistrationTokenNotRegistered(err) {
-		log.Fatalf("error initializing app: %v\n", err)
+	if err != nil {
+		if messaging.IsUnregistered(err) {
+			service.DB().Fcm().InsertFcmOfflineMsg(ctx, &entity.FcmOfflineMsg{
+				FmcToken: fcmToken,
+				Title:    title,
+				Body:     body,
+				Data:     data,
+				// UserId: "",
+				// Address: "",
+			})
+			g.Log().Info(ctx, "FCM IsUnregistered", "fcmToken:", fcmToken)
+		} else {
+			g.Log().Warning(ctx, "FCM push ", "fcmToken:", fcmToken, "err:", err)
+		}
 	}
 	g.Log().Info(ctx, "response:", response)
 	return response, err

@@ -10,6 +10,7 @@ require (
 	github.com/gogf/gf/v2 v2.7.0
 	github.com/mpcsdk/mpcCommon v0.0.0
 	github.com/nats-io/nats.go v1.34.1
+	go.opentelemetry.io/otel/trace v1.24.0
 	google.golang.org/api v0.170.0
 )
 

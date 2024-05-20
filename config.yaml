@@ -1,6 +1,6 @@
 server:
   name: "enhanced_riskctrl"
-  address:     ":8001"
+  address:     ":8004"
   workId: 1
   cpuCore: 2
   openapiPath: "/api.json"
@@ -20,6 +20,10 @@ nrpc:
   natsUrl: "127.0.0.1:4222"
 
 database:
+  fcm:
+  - link:     "pgsql:postgres:123456@tcp(127.0.0.1:10100)/fcm"
+  sync_chain:
+  - link:     "pgsql:postgres:123456@tcp(127.0.0.1:10100)/sync_chain"
   enhanced_riskctrl:
   - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/enhanced_riskctrl"
     role: "master"
@@ -27,6 +31,8 @@ database:
     role: "slave"
   mpc:
   - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/mpc"
+  riskcontrol:
+  - link:     "mysql:ssh:123456@tcp(127.0.0.1:3305)/riskcontrol"
 
 cache:
   duration: 10000

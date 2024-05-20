@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/mpcsdk/mpcCommon/mpcdao"
 	"github.com/mpcsdk/mpcCommon/mpcdao/model/entity"
 	"github.com/mpcsdk/mpcCommon/mq"
 	"github.com/nats-io/nats.go/jetstream"
@@ -19,6 +20,9 @@ type sReceiver struct {
 	///
 	cons_transfer jetstream.Consumer
 	cons_mint     jetstream.Consumer
+	////db
+	contracts map[string]*entity.Contractabi
+	///
 }
 
 func new() *sReceiver {
@@ -52,6 +56,7 @@ func new() *sReceiver {
 		nats:          nats,
 		cons_transfer: cons_transfer,
 		cons_mint:     cons_mint,
+		contracts:     map[string]*entity.Contractabi{},
 	}
 
 	cons_transfer.Consume(s.transferMsgConsum)
@@ -62,6 +67,14 @@ func new() *sReceiver {
 		msg.Ack()
 	})
 	///
+	ruledb := mpcdao.NewRiskCtrlRule(nil, 0)
+	contracts, err := ruledb.GetContractAbiBriefs(s.ctx, 0, "")
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range contracts {
+		s.contracts[c.ContractAddress] = c
+	}
 	///
 
 	///

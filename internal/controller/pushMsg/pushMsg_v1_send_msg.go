@@ -7,13 +7,9 @@ import (
 	"fcmMsg/internal/service"
 )
 
-func (c *ControllerV1) PushMsg(ctx context.Context, req *v1.PushMsgReq) (res *v1.PushMsgRes, err error) {
-	///check token
-
-	/////
-	/////
+func (c *ControllerV1) SendMsg(ctx context.Context, req *v1.SendMsgReq) (res *v1.SendMsgRes, err error) {
 	response, err := service.Fcm().Send(ctx, req.FcmToken, req.Title, req.Body, req.Data)
-	return &v1.PushMsgRes{
+	return &v1.SendMsgRes{
 		Response: response,
 	}, err
 }

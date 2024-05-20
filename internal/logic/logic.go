@@ -8,4 +8,5 @@ import (
 	_ "fcmMsg/internal/logic/db"
 	_ "fcmMsg/internal/logic/fcm"
 	_ "fcmMsg/internal/logic/reciver"
+	_ "fcmMsg/internal/logic/userinfo"
 )

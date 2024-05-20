@@ -1,6 +1,8 @@
 package conf
 
 import (
+	"github.com/mpcsdk/mpcCommon/rand"
+
 	"github.com/gogf/gf/v2/container/gvar"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcfg"
@@ -30,10 +32,11 @@ type Jaeger struct {
 
 // //
 type Cfg struct {
-	Server *Server `json:"server" v:"required"`
-	Jaeger *Jaeger `json:"jaeger" v:"required"`
-	Nrpc   *Nrpcfg `json:"nrpc" v:"required"`
-	Cache  *Cache  `json:"cache" v:"required"`
+	Server       *Server `json:"server" v:"required"`
+	UserTokenUrl string  `json:"userTokenUrl" v:"required"`
+	Jaeger       *Jaeger `json:"jaeger" v:"required"`
+	Nrpc         *Nrpcfg `json:"nrpc" v:"required"`
+	Cache        *Cache  `json:"cache" v:"required"`
 }
 
 var Config = &Cfg{}
@@ -53,4 +56,6 @@ func init() {
 	if err := g.Validator().Data(Config).Run(ctx); err != nil {
 		panic(err)
 	}
+	////
+	rand.InitIdGen(Config.Server.WorkId)
 }
