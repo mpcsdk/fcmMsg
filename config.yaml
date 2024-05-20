@@ -1,6 +1,6 @@
 server:
-  name: "enhanced_riskctrl"
-  address:     ":8004"
+  name: "fcmProxy"
+  address:     ":8005"
   workId: 1
   cpuCore: 2
   openapiPath: "/api.json"
