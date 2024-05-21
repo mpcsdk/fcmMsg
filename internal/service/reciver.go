@@ -6,9 +6,7 @@
 package service
 
 type (
-	IReceiver interface {
-		TransferTestMsg(address string)
-	}
+	IReceiver interface{}
 )
 
 var (
