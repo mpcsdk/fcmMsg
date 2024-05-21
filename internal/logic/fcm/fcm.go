@@ -3,6 +3,7 @@ package logic
 import (
 	"context"
 	"fcmMsg/internal/service"
+	"fmt"
 	"sync"
 
 	firebase "firebase.google.com/go/v4"
@@ -43,6 +44,10 @@ func (s *sFcm) SubFcmToken(address string, token string) {
 		fcmToken: token,
 		addr:     address,
 	}
+	///todo: test msg
+	body := fmt.Sprint("您的钱包地址：", address, "已接收", 100, "RPG", "，请前往交易记录查看详情。")
+
+	s.PushByAddr(s.ctx, address, "FT接收成功", body, `{"txHash":"0x123123123"}`)
 }
 
 func (s *sFcm) scanOfflineMsg() {

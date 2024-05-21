@@ -19,7 +19,7 @@ func (c *ControllerV1) SubMsg(ctx context.Context, req *v1.SubMsgReq) (*v1.SubMs
 	defer span.End()
 	g.Log().Debug(ctx, "SubMsg : ", req)
 	//
-	_, err := service.UserInfo().GetUserInfo(ctx, req.Token)
+	info, err := service.UserInfo().GetUserInfo(ctx, req.Token)
 	if err != nil {
 		g.Log().Error(ctx, "SubMsg : ", req, err)
 		g.RequestFromCtx(ctx).Response.WriteStatusExit(500)
@@ -27,6 +27,7 @@ func (c *ControllerV1) SubMsg(ctx context.Context, req *v1.SubMsgReq) (*v1.SubMs
 	}
 	////checke
 	err = service.DB().Fcm().InsertFcmToken(ctx, &entity.FcmToken{
+		UserId:   info.UserId,
 		Token:    req.Token,
 		FcmToken: req.FcmToken,
 		Address:  req.Address,
