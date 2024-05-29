@@ -1,5 +1,5 @@
 server:
-  name: "fcmProxy"
+  name: "fcmMsg"
   address:     ":8005"
   workId: 1
   cpuCore: 2
@@ -19,6 +19,8 @@ logger:
 nrpc:
   natsUrl: "127.0.0.1:4222"
 
+userTokenUrl: "https://auth-dev.mixmarvel-sdk.com/info"
+
 database:
   fcm:
   - link:     "pgsql:postgres:123456@tcp(127.0.0.1:10100)/fcm"
@@ -32,7 +34,7 @@ database:
   mpc:
   - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/mpc"
   riskcontrol:
-  - link:     "mysql:ssh:123456@tcp(127.0.0.1:3305)/riskcontrol"
+  - link:     "mysql:riskcontrol:123456@tcp(127.0.0.1:3306)/riskcontrol"
 
 cache:
   duration: 10000

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fcmMsg/internal/conf"
 	"fcmMsg/internal/service"
 
 	"github.com/mpcsdk/mpcCommon/mpcdao"
@@ -16,7 +17,9 @@ func (s *sDB) Fcm() *mpcdao.Fcm {
 
 // /
 func NewDB() *sDB {
-	return &sDB{}
+	return &sDB{
+		fmc: mpcdao.NewFcm(nil, conf.Config.Cache.Duration),
+	}
 }
 
 func init() {

@@ -3,13 +3,14 @@ package logic
 import (
 	"context"
 	"fcmMsg/internal/service"
-	"fmt"
 	"sync"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/mpcsdk/mpcCommon/mpccode"
 	"github.com/mpcsdk/mpcCommon/mpcdao"
 	"github.com/mpcsdk/mpcCommon/mpcdao/model/entity"
 	"github.com/mpcsdk/mpcCommon/rand"
@@ -33,21 +34,53 @@ func (s *sFcm) FcmToken(address string) string {
 	defer s.addrLock.RUnlock()
 	return s.addrFcmTokens[address]
 }
-func (s *sFcm) SubFcmToken(address string, token string) {
+func (s *sFcm) SubFcmToken(ctx context.Context, userId, address string, fcmToken string, token string) error {
+	///
+	fcms, err := service.DB().Fcm().QueryFcmToken(ctx, &mpcdao.QueryFcmToken{
+		Address: address,
+	})
+	if err != nil {
+		g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
+		return mpccode.CodeInternalError()
+	}
+	////
+	newFcmToken := true
+	for _, fcm := range fcms {
+		if fcm.FcmToken == fcmToken && fcm.Address == address {
+			newFcmToken = false
+			continue
+		}
+		err := service.DB().Fcm().DelFcmToken(ctx, fcm.Address, fcm.FcmToken)
+		if err != nil {
+			g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
+		}
+	}
+	///
+	if newFcmToken {
+		err = service.DB().Fcm().InsertFcmToken(ctx, &entity.FcmToken{
+			UserId:   userId,
+			Token:    token,
+			FcmToken: fcmToken,
+			Address:  address,
+		})
+		if err != nil {
+			g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
+			return mpccode.CodeInternalError()
+		}
+	}
+	//
 	{
 		s.addrLock.Lock()
-		defer s.addrLock.Unlock()
-		s.addrFcmTokens[address] = token
+		s.addrFcmTokens[address] = fcmToken
+		s.addrLock.Unlock()
 	}
 	///scanOffline msg
 	s.scanChan <- scanData{
-		fcmToken: token,
+		fcmToken: fcmToken,
 		addr:     address,
 	}
-	///todo: test msg
-	body := fmt.Sprint("您的钱包地址：", address, "已接收", 100, "RPG", "，请前往交易记录查看详情。")
 
-	s.PushByAddr(s.ctx, address, "FT接收成功", body, `{"txHash":"0x123123123"}`)
+	return err
 }
 
 func (s *sFcm) scanOfflineMsg() {
@@ -87,24 +120,28 @@ func (s *sFcm) scanOffline(ctx context.Context, address string, token string) {
 func (s *sFcm) PushByAddr(ctx context.Context, addr string, title string, body string, data string) (string, error) {
 	fcmToken := s.FcmToken(addr)
 	if fcmToken == "" {
+		g.Log().Info(ctx, "UnSub add:", addr, "body:", body)
 		return "", nil
 	}
+	g.Log().Debug(ctx, "PushByAddr:", "addr:", addr, "token:", fcmToken, "title:", title, "body:", body, "data:", data)
 	////
 	response, err := s.Send(ctx, fcmToken, title, body, data)
 	if err != nil {
 		if messaging.IsUnregistered(err) {
 			id := rand.GenNewSid()
 			err := service.DB().Fcm().InsertFcmOfflineMsg(ctx, &entity.FcmOfflineMsg{
-				Id:       id,
-				FmcToken: fcmToken,
-				Title:    title,
-				Body:     body,
-				Data:     data,
-				UserId:   "",
-				Address:  addr,
+				Id:          id,
+				FmcToken:    fcmToken,
+				Title:       title,
+				Body:        body,
+				Data:        data,
+				UserId:      "",
+				Address:     addr,
+				CreatedTime: gtime.Now(),
 			})
 			if err != nil {
 				g.Log().Warning(ctx, "FCM InsertFcmOfflineMsg ", "addr:", addr, "token:", fcmToken, "err:", err)
+				return "", mpccode.CodeParamInvalid()
 			}
 		} else {
 			service.DB().Fcm().InsertPushErr(ctx, &entity.PushErr{
@@ -115,6 +152,7 @@ func (s *sFcm) PushByAddr(ctx context.Context, addr string, title string, body s
 				Data:     data,
 			})
 			g.Log().Warning(ctx, "FCM push ", "addr:", addr, "token:", fcmToken, "err:", err)
+			return "", mpccode.CodeInternalError()
 		}
 	}
 	g.Log().Info(ctx, "FCM push ", "addr:", addr, "token:", fcmToken, "response:", response)
@@ -128,8 +166,11 @@ func (s *sFcm) Send(ctx context.Context, fcmToken string, title string, body str
 		},
 		Android: &messaging.AndroidConfig{
 			Notification: &messaging.AndroidNotification{
-				ClickAction: data,
+				ClickAction: "com.mmsdk.opengame",
 			},
+		},
+		Data: map[string]string{
+			"data": data,
 		},
 		Token: fcmToken,
 	})
@@ -169,7 +210,7 @@ func New() *sFcm {
 	addrFcmTokens := map[string]string{}
 	var lastPos mpcdao.PosFcmToken = nil
 	for {
-		fcms, lastPos, err := service.DB().Fcm().QueryFcmTokenAll(ctx, lastPos, 10)
+		fcms, pos, err := service.DB().Fcm().QueryFcmTokenAll(ctx, lastPos, 10)
 		if err != nil {
 			panic(err)
 		}
@@ -180,7 +221,8 @@ func New() *sFcm {
 		if len(fcms) < 10 {
 			break
 		}
-		lastPos = lastPos
+		lastPos = pos
+
 	}
 
 	////
@@ -188,6 +230,7 @@ func New() *sFcm {
 		ctx:           ctx,
 		client:        client,
 		addrFcmTokens: addrFcmTokens,
+		scanChan:      make(chan scanData, 1000),
 	}
 }
 

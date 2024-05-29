@@ -22,15 +22,17 @@ type sReceiver struct {
 	cons_mint     jetstream.Consumer
 	////db
 	contracts map[string]*entity.Contractabi
+	chains    map[int64]*entity.Chaincfg
 	///
 }
 
 func new() *sReceiver {
 
 	ctx := gctx.GetInitCtx()
-	///
+
 	nats := mq.New(conf.Config.Nrpc.NatsUrl)
 
+	///
 	////transfer msg
 	cons_transfer, err := nats.GetConsumer("fcmTransfer", mq.JetStream_SyncChain, mq.JetSub_SyncChainTransfer)
 	if err != nil {
@@ -57,15 +59,25 @@ func new() *sReceiver {
 		cons_transfer: cons_transfer,
 		cons_mint:     cons_mint,
 		contracts:     map[string]*entity.Contractabi{},
+		chains:        map[int64]*entity.Chaincfg{},
 	}
-
-	cons_transfer.Consume(s.transferMsgConsum)
-	cons_mint.Consume(func(msg jetstream.Msg) {
-		tx := &entity.ChainTx{}
-		json.Unmarshal(msg.Data(), tx)
-
-		msg.Ack()
-	})
+	/////chaincfg
+	chaincfgDb := mpcdao.NewChainCfg()
+	chaincfgs, err := chaincfgDb.AllCfg(s.ctx)
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range chaincfgs {
+		s.chains[c.ChainId] = c
+	}
+	/////
+	// contracts, err := chaincfg.GetContractAbiBriefs(s.ctx, 0, "")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// for _, c := range contracts {
+	// 	s.contracts[c.ContractAddress] = c
+	// }
 	///
 	ruledb := mpcdao.NewRiskCtrlRule(nil, 0)
 	contracts, err := ruledb.GetContractAbiBriefs(s.ctx, 0, "")
@@ -75,7 +87,14 @@ func new() *sReceiver {
 	for _, c := range contracts {
 		s.contracts[c.ContractAddress] = c
 	}
-	///
+	////
+	cons_transfer.Consume(s.transferMsgConsum)
+	cons_mint.Consume(func(msg jetstream.Msg) {
+		tx := &entity.ChainTx{}
+		json.Unmarshal(msg.Data(), tx)
+
+		msg.Ack()
+	})
 
 	///
 	return s
