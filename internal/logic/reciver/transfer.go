@@ -16,16 +16,17 @@ func addrabbr(addr string) string {
 	return addr[0:5] + "..." + addr[len(addr)-4:]
 
 }
+
 func (s *sReceiver) transferMsgConsum(msg jetstream.Msg) {
 	tx := &entity.ChainTx{}
 	json.Unmarshal(msg.Data(), tx)
 	g.Log().Debug(s.ctx, "transferMsgConsum:", tx)
 	////removed , status
-	// if tx.Status == 0 {
-	// 	g.Log().Debug(s.ctx, "transferMsgConsum status:", tx)
-	// 	msg.Ack()
-	// 	return
-	// }
+	if tx.Status == 0 {
+		g.Log().Warning(s.ctx, "transferMsgConsum status:", tx)
+		msg.Ack()
+		return
+	}
 	// addr := ""
 	// fcmToken := ""
 	// title := ""
@@ -36,6 +37,7 @@ func (s *sReceiver) transferMsgConsum(msg jetstream.Msg) {
 		fbalance := big.NewFloat(0)
 		fbalance.SetString(tx.Value)
 		fval := fbalance.Quo(fbalance, big.NewFloat(math.Pow10(18)))
+		val := fval.Text('f', -1)
 		// val, _ := big.NewInt(0).SetString(tx.Value, 10)
 		// val.Sub()
 		// val = val.Div(val, big.NewInt(int64(18)))
@@ -46,14 +48,14 @@ func (s *sReceiver) transferMsgConsum(msg jetstream.Msg) {
 			coin = chain.Coin
 		}
 
-		title := coin + `接收成功`
+		title := coin + ` Receive Success`
 		to := addrabbr(tx.To)
-		body := fmt.Sprint("您的钱包地址：", to, "已接收 ", fval.String(), coin, "，请前往交易记录查看详情。")
+		body := fmt.Sprint("Your wallet address: ", to, " has received ", val, coin, ". Please check your transaction history for details.")
 		service.Fcm().PushByAddr(s.ctx, tx.To, title, body, string(msg.Data()))
 		////
-		title = coin + `发送成功`
+		title = coin + ` Send Success`
 		from := addrabbr(tx.From)
-		body = fmt.Sprint("您的钱包地址：", from, "已发送 ", fval.String(), coin, "，请前往交易记录查看详情。")
+		body = fmt.Sprint("Your wallet address: ", from, " has sent ", val, coin, ". Please check your transaction history for details.")
 		service.Fcm().PushByAddr(s.ctx, tx.From, title, body, string(msg.Data()))
 		msg.Ack()
 		return
@@ -69,31 +71,31 @@ func (s *sReceiver) transferMsgConsum(msg jetstream.Msg) {
 			fbalance := big.NewFloat(0)
 			fbalance.SetString(tx.Value)
 			fval := fbalance.Quo(fbalance, big.NewFloat(math.Pow10(contract.Decimal)))
+			val := fval.Text('f', -1)
 			////
-			title := contract.ContractName + `接收成功`
+			title := contract.ContractName + ` Receive Success`
 			to := addrabbr(tx.To)
-			body := fmt.Sprint("您的钱包地址：", to, "已接收 ", fval.String(), contract.ContractName, "，请前往交易记录查看详情。")
+			body := fmt.Sprint("Your wallet address: ", to, " has received ", val, contract.ContractName, ". Please check your transaction history for details.")
 			service.Fcm().PushByAddr(s.ctx, tx.To, title, body, string(msg.Data()))
 			////
-			title = contract.ContractName + `发送成功`
+			title = contract.ContractName + ` Send Success`
 			from := addrabbr(tx.From)
-			body = fmt.Sprint("您的钱包地址：", from, "已发送 ", fval.String(), contract.ContractName, "，请前往交易记录查看详情。")
+			body = fmt.Sprint("Your wallet address: ", from, " has sent ", val, contract.ContractName, ". Please check your transaction history for details.")
 			service.Fcm().PushByAddr(s.ctx, tx.From, title, body, string(msg.Data()))
 			/////
 		} else if contract.ContractKind == "nft" {
-			title := `NFT接收成功`
+			title := `NFT Receive Success`
 			id := big.NewInt(0)
 			err := id.UnmarshalText([]byte(tx.TokenId))
 			fmt.Println(err)
-			fmt.Println(id.Text(10))
-			// tokenId := id.String()
+			tokenId := id.Text(10)
 			to := addrabbr(tx.To)
-			body := fmt.Sprint("您的钱包地址：", to, "已接收 ", contract.ContractName, id.Text(10), "，请前往交易记录查看详情。")
+			body := fmt.Sprint("Your wallet address: ", to, " has successfully received ", contract.ContractName, ":", tokenId, ". Please check your transaction history for details.")
 			service.Fcm().PushByAddr(s.ctx, tx.To, title, body, string(msg.Data()))
 			////
-			title = `NFT发送成功`
+			title = `NFT Send Success`
 			from := addrabbr(tx.From)
-			body = fmt.Sprint("您的钱包地址：", from, "已发送 ", contract.ContractName, id.Text(10), "，请前往交易记录查看详情。")
+			body = fmt.Sprint("Your wallet address: ", from, " has successfully sent ", contract.ContractName, ":", tokenId, ". Please check your transaction history for details.")
 			service.Fcm().PushByAddr(s.ctx, tx.From, title, body, string(msg.Data()))
 			/////
 		} else {

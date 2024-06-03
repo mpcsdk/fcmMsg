@@ -36,7 +36,7 @@ func (s *sFcm) FcmToken(address string) string {
 }
 func (s *sFcm) SubFcmToken(ctx context.Context, userId, address string, fcmToken string, token string) error {
 	///
-	fcms, err := service.DB().Fcm().QueryFcmToken(ctx, &mpcdao.QueryFcmToken{
+	fcm, err := service.DB().Fcm().QueryFcmToken(ctx, &mpcdao.QueryFcmToken{
 		Address: address,
 	})
 	if err != nil {
@@ -44,28 +44,28 @@ func (s *sFcm) SubFcmToken(ctx context.Context, userId, address string, fcmToken
 		return mpccode.CodeInternalError()
 	}
 	////
-	newFcmToken := true
-	for _, fcm := range fcms {
-		if fcm.FcmToken == fcmToken && fcm.Address == address {
-			newFcmToken = false
-			continue
-		}
-		err := service.DB().Fcm().DelFcmToken(ctx, fcm.Address, fcm.FcmToken)
-		if err != nil {
-			g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
-		}
-	}
-	///
-	if newFcmToken {
+	if fcm == nil {
 		err = service.DB().Fcm().InsertFcmToken(ctx, &entity.FcmToken{
-			UserId:   userId,
-			Token:    token,
-			FcmToken: fcmToken,
-			Address:  address,
+			UserId:      userId,
+			Token:       token,
+			FcmToken:    fcmToken,
+			Address:     address,
+			CreatedTime: gtime.Now(),
+			UpdatedTime: gtime.New(),
 		})
 		if err != nil {
 			g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
 			return mpccode.CodeInternalError()
+		}
+	} else {
+		if fcm.FcmToken == fcmToken && fcm.Address == address {
+		}else{
+			fcm.FcmToken = fcmToken
+			fcm.UpdatedTime = gtime.Now()
+			err := service.DB().Fcm().UpdateFcmToken(ctx, fcm.Address, fcm)
+			if err != nil {
+				g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
+			}
 		}
 	}
 	//
@@ -119,11 +119,11 @@ func (s *sFcm) scanOffline(ctx context.Context, address string, token string) {
 }
 func (s *sFcm) PushByAddr(ctx context.Context, addr string, title string, body string, data string) (string, error) {
 	fcmToken := s.FcmToken(addr)
+	g.Log().Debug(ctx, "PushByAddr:", "addr:", addr, "token:", fcmToken, "title:", title, "body:", body, "data:", data)
 	if fcmToken == "" {
-		g.Log().Info(ctx, "UnSub add:", addr, "body:", body)
+		g.Log().Info(ctx, "PushByAddr UnSub add:", addr)
 		return "", nil
 	}
-	g.Log().Debug(ctx, "PushByAddr:", "addr:", addr, "token:", fcmToken, "title:", title, "body:", body, "data:", data)
 	////
 	response, err := s.Send(ctx, fcmToken, title, body, data)
 	if err != nil {
