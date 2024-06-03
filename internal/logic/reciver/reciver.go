@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fcmMsg/internal/conf"
 	"fcmMsg/internal/service"
+	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
@@ -43,6 +44,7 @@ func new() *sReceiver {
 	if err != nil {
 		panic(err)
 	}
+	time.Sleep(10 * time.Second)
 	////takerbid msg
 	///crossererc20 msg
 	////swapcoress msg
@@ -79,25 +81,30 @@ func new() *sReceiver {
 	// 	s.contracts[c.ContractAddress] = c
 	// }
 	///
-	ruledb := mpcdao.NewRiskCtrlRule(nil, 0)
-	contracts, err := ruledb.GetContractAbiBriefs(s.ctx, 0, "")
-	if err != nil {
-		panic(err)
-	}
-	for _, c := range contracts {
-		s.contracts[c.ContractAddress] = c
-	}
-	////
-	cons_transfer.Consume(s.transferMsgConsum)
-	cons_mint.Consume(func(msg jetstream.Msg) {
-		tx := &entity.ChainTx{}
-		json.Unmarshal(msg.Data(), tx)
+	go func() {
+		time.Sleep(20 * time.Second)
+		ruledb := mpcdao.NewRiskCtrlRule(nil, 0)
+		contracts, err := ruledb.GetContractAbiBriefs(s.ctx, 0, "")
+		if err != nil {
+			panic(err)
+		}
+		for _, c := range contracts {
+			s.contracts[c.ContractAddress] = c
+		}
+		////
+		s.cons_transfer.Consume(s.transferMsgConsum)
+		s.cons_mint.Consume(func(msg jetstream.Msg) {
+			tx := &entity.ChainTx{}
+			json.Unmarshal(msg.Data(), tx)
 
-		msg.Ack()
-	})
-
+			msg.Ack()
+		})
+	}()
 	///
 	return s
+}
+func (s *sReceiver) StartSub() {
+
 }
 
 func init() {
