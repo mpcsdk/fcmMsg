@@ -6,7 +6,9 @@
 package service
 
 type (
-	IReceiver interface{}
+	IReceiver interface {
+		StartSub()
+	}
 )
 
 var (
