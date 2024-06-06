@@ -20,3 +20,4 @@ bin
 fcmMsg
 *.log
 token.json
+nohup.out

@@ -36,16 +36,16 @@ func (s *sFcm) FcmToken(address string) string {
 }
 func (s *sFcm) SubFcmToken(ctx context.Context, userId, address string, fcmToken string, token string) error {
 	///
-	fcm, err := service.DB().Fcm().QueryFcmToken(ctx, &mpcdao.QueryFcmToken{
+	fcm, _ := service.DB().Fcm().QueryFcmToken(ctx, &mpcdao.QueryFcmToken{
 		Address: address,
 	})
-	if err != nil {
-		g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
-		return mpccode.CodeInternalError()
-	}
+	// if err != nil {
+	// 	g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
+	// 	return mpccode.CodeInternalError()
+	// }
 	////
 	if fcm == nil {
-		err = service.DB().Fcm().InsertFcmToken(ctx, &entity.FcmToken{
+		err := service.DB().Fcm().InsertFcmToken(ctx, &entity.FcmToken{
 			UserId:      userId,
 			Token:       token,
 			FcmToken:    fcmToken,
@@ -59,7 +59,7 @@ func (s *sFcm) SubFcmToken(ctx context.Context, userId, address string, fcmToken
 		}
 	} else {
 		if fcm.FcmToken == fcmToken && fcm.Address == address {
-		}else{
+		} else {
 			fcm.FcmToken = fcmToken
 			fcm.UpdatedTime = gtime.Now()
 			err := service.DB().Fcm().UpdateFcmToken(ctx, fcm.Address, fcm)
@@ -80,7 +80,7 @@ func (s *sFcm) SubFcmToken(ctx context.Context, userId, address string, fcmToken
 		addr:     address,
 	}
 
-	return err
+	return nil
 }
 
 func (s *sFcm) scanOfflineMsg() {

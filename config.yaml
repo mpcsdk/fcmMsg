@@ -26,15 +26,8 @@ database:
   - link:     "pgsql:postgres:123456@tcp(127.0.0.1:10100)/fcm"
   sync_chain:
   - link:     "pgsql:postgres:123456@tcp(127.0.0.1:10100)/sync_chain"
-  enhanced_riskctrl:
-  - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/enhanced_riskctrl"
-    role: "master"
-  - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/enhanced_riskctrl"
-    role: "slave"
-  mpc:
-  - link: "pgsql:postgres:123456@tcp(123.60.148.168:10100)/mpc"
   riskcontrol:
-  - link:     "mysql:riskcontrol:123456@tcp(127.0.0.1:3306)/riskcontrol"
+  - link:     "mysql:riskcontrol:123456@tcp(119.8.29.223:10090)/riskcontrol"
 
 cache:
   duration: 10000
