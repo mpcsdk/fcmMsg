@@ -51,7 +51,7 @@ func (s *sFcm) SubFcmToken(ctx context.Context, userId, address string, fcmToken
 			FcmToken:    fcmToken,
 			Address:     address,
 			CreatedTime: gtime.Now(),
-			UpdatedTime: gtime.New(),
+			UpdatedTime: gtime.Now(),
 		})
 		if err != nil {
 			g.Log().Warning(ctx, "SubFcmToken:", "userId:", userId, "address:", address, "fcmToken:", fcmToken, "token:", token, "err:", err)
